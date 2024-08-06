@@ -47,3 +47,27 @@ def get_rates(symbol, time_frame=mt5.TIMEFRAME_H1, from_date=None, to_date=None)
     df_rates = df_rates.set_index("time")
 
     return df_rates
+
+
+
+def add_shifted_columns(df, num_columns, name="close"):
+    '''
+    This function adds shifted columns to a DataFrame with shifted steps for each new column.
+    
+    Parameters:
+        df (pd.DataFrame): The DataFrame to work with or column within the DataFrame.
+        num_columns (int): The number of columns to be added.
+        name (str): The name of the column to use from the dataframe and assign name to be assigned.
+        
+    Returns:
+        pd.DataFrame: The modified DataFrame with all added columns.
+    '''       
+    # Create a copy of the original DataFrame
+    df_copy = df.copy()
+
+    for i in range(1, num_columns + 1):
+        col_name = f"{i}_{name}_bars_ago"
+        shift_value = i
+        df_copy[col_name] = df_copy[name].shift(shift_value)
+        
+    return df_copy
