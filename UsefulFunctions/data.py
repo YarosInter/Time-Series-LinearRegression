@@ -1,6 +1,8 @@
 import MetaTrader5 as mt5
 from datetime import datetime
 import pandas as pd
+import numpy as np
+import matplotlib.pyplot as plt
 
 
 def get_rates(symbol, time_frame=mt5.TIMEFRAME_H1, from_date=None, to_date=None):
@@ -75,7 +77,6 @@ def add_shifted_columns(df, num_columns, name="close"):
 
 
 def split_data(features, labels, percent=80):
-    
     """
     Splits features and labels into training and testing sets based on the specified percentage.
     
@@ -101,62 +102,5 @@ def split_data(features, labels, percent=80):
 
     return X_train, y_train, X_test, y_test
 
-
-
-def compute_strategy_returns(y_test, y_pred):
-    """
-    Computes the strategy returns by comparing real percent changes with model predictions.
-
-    This function creates a DataFrame that includes the actual percent changes (`y_test`) and the model's
-    predicted values (`y_pred`). It then calculates the directional positions based on the actual and predicted
-    values, and computes the returns by multiplying the real percent change by the predicted position.
-
-    Args:
-        y_test (Series or DataFrame): The actual percent changes (real values).
-        y_pred (Series or DataFrame): The predicted values from the model.
-
-    Returns:
-        DataFrame: A DataFrame containing the actual percent changes, predicted values, 
-                   real positions, predicted positions, and computed returns.
-    """
-
-    # Initialize a DataFrame with the actual percent changes and add the model's predictions
-    df = pd.DataFrame(y_test)
-    df["y_pred"] = y_pred
-
-    # Add columns for the real and predicted directional positions
-    df["real_position"] = np.sign(df_with_outcomes["pct_change"])
-    df["pred_position"] = np.sign(df_with_outcomes["prediction"])
-
-    # Calculate the strategy returns by multiplying the actual percent change by the predicted position
-    # Note: Predictions are based on the previous bar's data, so no additional shift is needed
-    df["returns"] = df_with_outcomes["pct_change"] * df_with_outcomes["pred_position"]
-
-    return df
-
-
-
-def plot_retorns(returns_serie):
-    """
-    Plots the cumulative percentage returns from a trading strategy.
-
-    This function takes a series of trading strategy returns, computes the cumulative sum, and 
-    plots it as a percentage. The plot visualizes the profit and loss (P&L) over time.
-
-    Args:
-        returns_serie (pandas.Series): A series containing the returns from the trading strategy.
-
-    Returns:
-        None: The function generates and displays a plot.
-    """
-    
-    import numpy as np
-    import matplotlib.pyplot as plt
-    
-    (np.cumsum(returns_serie)*100).plot(figsize=(15,6))
-    plt.xlabel('Year', fontsize=20)
-    plt.ylabel('P&L in %', fontsize=20)
-    plt.title('Returns From Strategy', fontsize=20)
-    plt.show()
 
 
