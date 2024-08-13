@@ -2,6 +2,8 @@ import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
 import MetaTrader5 as mt5
+from datetime import datetime
+from UsefulFunctions import data
 
 
 def compute_strategy_returns(y_test, y_pred):
@@ -60,7 +62,7 @@ def plot_returns(returns_serie):
 
 def vectorize_backtest_returns(returns, anualization_factor, benchmark_asset=".US500Cash", mt5_timeframe=mt5.TIMEFRAME_H1):
     """
-    Computes and prints the Sortino Ratio, Beta Ratio, and Alpha Ratio for a given set of returns serie.
+    Computes and prints the Sortino Ratio, Beta Ratio, and Alpha Ratio for a given set of returns series.
     
     Parameters:
     - returns: Series of returns from a strategy.
@@ -75,10 +77,10 @@ def vectorize_backtest_returns(returns, anualization_factor, benchmark_asset=".U
     """
 
     ### Computing Sortino Ratio ###
-    
+
     # Sortino Ratio is being calculated without a Risk-Free Rate
     mean_return = np.mean(returns)
-    downside_deviation = np.std(returns[returns<0])
+    downside_deviation = np.std(returns[returns < 0])
     
     # Number of 15-minute periods in a year
     periods_per_year = anualization_factor * 252
@@ -91,13 +93,16 @@ def vectorize_backtest_returns(returns, anualization_factor, benchmark_asset=".U
     annualized_sortino = annualized_mean_return / annualized_downside_deviation
     
     print(f"Sortino Ratio: {'%.3f' % annualized_sortino}")
-    print("\n- Positive Sortino (> 0): The investment’s returns exceed the target return after accounting for downside risk.")
-    print("- Negative Sortino (< 0): The investment’s returns are less than the target return when considering downside risk.\n")
+    if annualized_sortino > 0:
+        print("- Positive Sortino (> 0): The investment’s returns exceed the target return after accounting for downside risk.\n")
+    else:
+        print("- Negative Sortino (< 0): The investment’s returns are less than the target return when considering downside risk.\n")
 
+    ### Computing Beta Ratio ###
 
-    ### Computing Beta Rario ###
+    print("***Asset for Benchamark is S&P500***\n")
 
-    # Fetching the oldest date from the X_test set to pull data from the same date for the SP500
+    # Fetching the oldest date from the X_test set to pull data from the same date for the S&P 500
     date = returns.index.min()
     
     # Extracting the year, month, and day from the date
@@ -108,19 +113,19 @@ def vectorize_backtest_returns(returns, anualization_factor, benchmark_asset=".U
     min = date.minute
     sec = date.second
     
-    # Pulling SP500 data from the specified date and time
+    # Pulling S&P 500 data from the specified date and time
     sp500_data = data.get_rates(".US500Cash", mt5.TIMEFRAME_H1, from_date=datetime(year, month, day))
     sp500_data = sp500_data[["close"]]
     
-    # Computing the returns on the SP500 to 
+    # Computing the returns on the S&P 500
     sp500_data["returns"] = sp500_data["close"].pct_change(1)
     sp500_data.drop("close", axis=1, inplace=True)
     sp500_data.dropna(inplace=True)
     
-    # Concatenate values between the returns in the predictions and the returns in the SP500
+    # Concatenate values between the returns in the predictions and the returns in the S&P 500
     val = pd.concat((returns, sp500_data["returns"]), axis=1)
     
-    # Changing columns names to indentify each one
+    # Changing column names to identify each one
     val.columns.values[0] = "Returns Pred"
     val.columns.values[1] = "Returns SP500"
     val.dropna(inplace=True)
@@ -132,18 +137,22 @@ def vectorize_backtest_returns(returns, anualization_factor, benchmark_asset=".U
     beta = covariance / variance
     
     print(f"Beta Ratio: {'%.3f' % beta}")
-    print("\n- Beta ≈ 1: The asset moves in line with the market.")
-    print("- Beta < 1: The asset is less volatile than the market (considered less risky).")
-    print("- Beta > 1: The asset is more volatile than the market (higher potential return but also higher risk).\n")
-
+    if beta == 1:
+        print("- Beta ≈ 1: The asset moves in line with the market.\n")
+    elif beta < 1:
+        print("- Beta < 1: The asset is less volatile than the market (considered less risky).\n")
+    else:
+        print("- Beta > 1: The asset is more volatile than the market (higher potential return but also higher risk).\n")
 
     ### Computing Alpha Ratio ###
 
-    alpha = (anualization_factor * 252 * mean_return * (1-beta))*100
+    alpha = (anualization_factor * 252 * mean_return * (1 - beta)) * 100
     
     print(f"Alpha Ratio: {'%.3f' % alpha}")
-    print("\n- Positive Alpha (> 0): Indicates the investment outperformed the market.")
-    print("- Negative Alpha (< 0): Indicates the investment underperformed the market.")
+    if alpha > 0:
+        print("- Positive Alpha (> 0): Indicates the investment outperformed the market.")
+    else:
+        print("- Negative Alpha (< 0): Indicates the investment underperformed the market.")
 
 
 
@@ -189,4 +198,46 @@ def compute_model_accuracy(real_positions, predicted_positions):
     plt.ylabel("Counts", fontsize=15)
     plt.xlabel("Distribution", fontsize=15);
 
-    return df_accuracy.head()
+    return df_accuracy
+
+
+
+def strategy_drawdown(return_series):
+    """
+    Computes and visualizes the drawdown of a strategy based on its return series.
+
+    Parameters:
+    return_series (pd.Series): A pandas Series containing the return series of the strategy. 
+                               Each value represents the return for a specific period.
+
+    Displays:
+    - A plot showing the drawdown over time as a filled area chart.
+    - The maximum drawdown percentage is printed to the console.
+
+    Notes:
+    - The function assumes the return series is cumulative and starts at zero.
+    - NaN values in the return series are dropped before computation.
+    - If the return series is empty or contains only NaN values, no plot will be generated.
+    """
+    
+    if return_series.dropna().empty:
+        print("The return series is empty or contains only NaN values.")
+        return
+
+    # Compute cumulative return
+    cumulative_return = return_series.dropna().cumsum() + 1
+
+    # Calculate running maximum
+    running_max = np.maximum.accumulate(cumulative_return)
+
+    # Computing the drawdown
+    drawdown = cumulative_return / running_max - 1
+
+    plt.figure(figsize=(15, 4))
+    plt.fill_between(drawdown.index, drawdown * 100, 0, drawdown, color="red", alpha=0.70)
+    plt.title("Strategy Drawdown", fontsize=20)
+    plt.ylabel("Drawdown %", fontsize=15)
+    plt.show()
+
+    maximum_drawdown = np.min(drawdown) * 100
+    print(f"Max Drawdown: {'%.2f' % maximum_drawdown}%")
