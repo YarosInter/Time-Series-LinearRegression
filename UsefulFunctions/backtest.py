@@ -150,9 +150,9 @@ def vectorize_backtest_returns(returns, anualization_factor, benchmark_asset=".U
     
     print(f"Alpha Ratio: {'%.3f' % alpha}")
     if alpha > 0:
-        print("- Positive Alpha (> 0): Indicates the investment outperformed the market.")
+        print("- Positive Alpha (> 0): The investment outperformed the market.")
     else:
-        print("- Negative Alpha (< 0): Indicates the investment underperformed the market.")
+        print("- Negative Alpha (< 0): The investment underperformed the market.")
 
 
 
