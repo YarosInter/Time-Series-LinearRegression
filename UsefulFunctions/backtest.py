@@ -28,12 +28,12 @@ def compute_strategy_returns(y_test, y_pred):
     df["y_pred"] = y_pred
 
     # Add columns for the real and predicted directional positions
-    df["real_position"] = np.sign(df_with_outcomes["pct_change"])
-    df["pred_position"] = np.sign(df_with_outcomes["prediction"])
+    df["real_position"] = np.sign(df["pct_change"])
+    df["pred_position"] = np.sign(df["prediction"])
 
     # Calculate the strategy returns by multiplying the actual percent change by the predicted position
     # Note: Predictions are based on the previous bar's data, so no additional shift is needed
-    df["returns"] = df_with_outcomes["pct_change"] * df_with_outcomes["pred_position"]
+    df["returns"] = df["pct_change"] * df["pred_position"]
 
     return df
 
